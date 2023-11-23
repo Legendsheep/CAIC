@@ -105,7 +105,7 @@ def train_HDC_RFF(n_class, N_train, Y_train, HDC_cont_train, gamma, D_b):
         #Solve the system of equations to get the vector alpha:
             
         alpha = np.linalg.solve(Beta,L)
-        print(np.matmul(Beta,alpha))
+        # print(np.matmul(Beta,alpha))
         
         # Get HDC prototype for class cla, still in floating point
         
