@@ -12,6 +12,8 @@ ir. Ali Safa, ir. Sergio Massaioli, Prof. Georges Gielen (MICAS-IMEC-KU Leuven)
 """
 
 import numpy as np
+import random
+import math
 from sklearn.utils import shuffle
 
 # Receives the HDC encoded test set "HDC_cont_test" and test labels "Y_test"
@@ -40,12 +42,18 @@ def compute_accuracy(HDC_cont_test, Y_test, centroids, biases):
 # when mode == 1, all the probability of having +1 scales with an input "key" i.e., when the inputs to the HDC encoded are coded
 # on e.g., 8-bit, we have 256 possible keys
 def lookup_generate(dim, n_keys, mode = 1):
+    arr = np.empty((n_keys,dim), int)
     if mode == 0:
-        # -> INSERT YOUR CODE
+        for i in range(n_keys):
+            random_arr = [-1 + 2*(random.uniform(0, 1) <= .5) for x in range(dim)]
+            arr[i] =  np.array([random_arr])
     else:
-        # -> INSERT YOUR CODE
+        B_in = math.log2(n_keys)
+        for i in range(n_keys):
+            random_arr = [-1 + 2*(random.uniform(0, 1) <= i/(2**(B_in) - 1)) for x in range(dim)]
+            arr[i] =  np.array([random_arr])
         
-    return table.astype(np.int8)
+    return arr.astype(np.int8)
     
 
 # Performs "part" of the HDC encoding (only input encoding, position encoding and bundling), without the thresholding at the end.
@@ -59,7 +67,8 @@ def encode_HDC_RFF(img, position_table, grayscale_table, dim):
     container = np.zeros((len(position_table), dim))
     for pixel in range(len(position_table)):
         #Get the input-encoding and XOR-ing result:  
-        hv = # -> INSERT YOUR CODE
+        encoded_input = grayscale_table[img[pixel]]
+        hv = np.multiply(position_table[pixel], encoded_input)
         container[pixel, :] = hv*1
         
     img_hv = np.sum(container, axis = 0) #bundling without the cyclic step yet
