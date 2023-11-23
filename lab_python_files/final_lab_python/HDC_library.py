@@ -27,7 +27,7 @@ def compute_accuracy(HDC_cont_test, Y_test, centroids, biases):
         for cl in range(n_class):
             final_HDC_centroid = centroids[cl]
              #compute LS-SVM response
-            response = # -> INSERT YOUR CODE 
+            response = np.dot(received_HDC_vector,final_HDC_centroid) + biases[cl]
             all_resp[cl] = response
         
         class_idx = np.argmax(all_resp)
@@ -91,34 +91,44 @@ def train_HDC_RFF(n_class, N_train, Y_train, HDC_cont_train, gamma, D_b):
         Beta = np.zeros((N_train+1, N_train+1)) #LS-SVM regression matrix
         #Fill Beta:
         
-        # -> INSERT YOUR CODE
-        
+        Beta[0,1:] = Y_train
+        Omega = np.multiply(np.outer(Y_train,Y_train), np.matmul(HDC_cont_train,np.transpose(HDC_cont_train))) + 1/gamma * np.identity(N_train)
+        for i in range(1,N_train+1):
+            Beta[i,0] = Y_train[i-1]
+            Beta[i,1:] = Omega[i-1,:]
+
         #Target vector L:
             
-        # -> INSERT YOUR CODE
+        L = np.ones((N_train+1,1))
+        L[0] = 0
         
         #Solve the system of equations to get the vector alpha:
             
-        alpha = # -> INSERT YOUR CODE
+        alpha = np.linalg.solve(Beta,L)
+        print(np.matmul(Beta,alpha))
         
         # Get HDC prototype for class cla, still in floating point
         
-        final_HDC_centroid = # -> INSERT YOUR CODE
+        weighting = np.multiply(Y_train,alpha[1:,0])
+        final_HDC_centroid = np.dot(np.transpose(HDC_cont_train),weighting)
         
+
         # Quantize HDC prototype to D_b-bit
-        final_HDC_centroid_q = # -> INSERT YOUR CODE 
+        biggest_index = np.argmax(final_HDC_centroid)
+        bit_req = math.ceil(math.log2(final_HDC_centroid[biggest_index]))
+        final_HDC_centroid_q = np.round(final_HDC_centroid/2**(-D_b + bit_req),0)*2**(-D_b + bit_req) #check if this is correct later
         #Amplification factor for the LS-SVM bias
-        fact = # -> INSERT YOUR CODE  
+        fact = 1 
         if np.max(np.abs(final_HDC_centroid)) == 0:
             print("Kernel matrix badly conditionned! Ignoring...")
             centroids_q.append(np.ones(final_HDC_centroid_q.shape)) #trying to manage badly conditioned matrices, do not touch
             biases_q.append(10000)
         else:
             centroids_q.append(final_HDC_centroid_q*1)
-            biases_q.append(alpha[0]*fact)
+            biases_q.append(alpha[0,0]*fact)
             
         centroids.append(final_HDC_centroid*1)
-        biases.append(alpha[0])
+        biases.append(alpha[0,0])
         
     return centroids, biases, centroids_q, biases_q
 
@@ -143,15 +153,17 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, al
         HDC_cont_train_cpy = HDC_cont_train_ * 1
         
         # Apply cyclic accumulation with biases and accumulation speed beta_
-        
-        # -> INSERT YOUR CODE
+
+        HDC_cont_train_cpy = (beta_ * HDC_cont_train_cpy + bias_)% (2**B_cnt) #bundling cyclic 
         
         # Ternary thresholding with threshold alpha_sp:
             
-        # -> INSERT YOUR CODE
+        one_index = HDC_cont_train_cpy - (2**(B_cnt-1)) > alpha_sp
+        mone_index = HDC_cont_train_cpy - (2**(B_cnt-1)) < -alpha_sp
+        HDC_cont_train_cpy = np.array(one_index) * 1 + np.array(mone_index) * -1
             
 
-        Y_train = LABELS[:N_train] - 1
+        Y_train = (LABELS[:N_train] - 1.5)*2
         Y_train = Y_train.astype(int)
         
         # Train the HDC system to find the prototype hypervectors, _q meqns quantized
@@ -162,12 +174,15 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, al
         HDC_cont_test_cpy = HDC_cont_test_ * 1
         
         # Apply cyclic accumulation with biases and accumulation speed beta_
+
+        HDC_cont_test_cpy = (beta_ * HDC_cont_test_cpy + bias_)% (2**B_cnt) #bundling cyclic 
         
-        # -> INSERT YOUR CODE
         
         # Ternary thresholding with threshold alpha_sp:
             
-        # -> INSERT YOUR CODE
+        one_index = HDC_cont_test_cpy - (2**(B_cnt-1)) > alpha_sp
+        mone_index = HDC_cont_test_cpy - (2**(B_cnt-1)) < -alpha_sp
+        HDC_cont_test_cpy = np.array(one_index) * 1 + np.array(mone_index) * -1
         
         Y_test = LABELS[N_train:] - 1
         Y_test = Y_test.astype(int)
