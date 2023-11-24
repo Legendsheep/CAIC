@@ -21,7 +21,7 @@ plt.close('all')
 """
 ##################################   
 #Replace the path "WISCONSIN/data.csv" with wathever path you have. Note, on Windows, you must put the "r" in r'C:etc..'
-dataset_path = 'WISCONSIN/data.csv' 
+dataset_path = 'lab_python_files/final_lab_python/WISCONSIN/data.csv' 
 ##################################   
 imgsize_vector = 30 #Each input vector has 30 features
 n_class = 2
@@ -107,7 +107,7 @@ for optimalpoint in range(N_tradeof_points):
              
     else:
         print("Loading simplex")
-        Simplex = np.load("Simplex2.npz", allow_pickle = True)['data']
+        Simplex = np.load("lab_python_files/final_lab_python/Simplex2.npz", allow_pickle = True)['data']
 
     
     #Compute the cost F(x) associated to each point in the Initial Simplex
@@ -157,17 +157,17 @@ for optimalpoint in range(N_tradeof_points):
         
         #2) average simplex x_0 
         
-        # -> INSERT YOUR CODE
+        x_0 = np.average(Simplex[:-1,:], axis= 0)
         
         #3) Reflexion x_r
         
-        # -> INSERT YOUR CODE
+        x_r = x_0 + alpha_simp * (x_0 - Simplex[-1,:])
         
         #Evaluate cost of reflected point x_r
         
-        # -> INSERT YOUR CODE
+        F_curr, acc_curr, sparse_curr = evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, x_r[2], bias_, x_r[0], x_r[1], n_class, N_train, D_b, lambda_1, lambda_2, B_cnt)
         
-        if # -> INSERT YOUR CODE:
+        if F_curr < F_of_x[-2] and  F_of_x[0] <= F_curr:
             F_of_x[-1] = F_curr
             Simplex[-1,:] = x_r
             Accs[-1] = acc_curr
@@ -178,15 +178,15 @@ for optimalpoint in range(N_tradeof_points):
             
         if rest == True:
             #4) Expansion x_e
-            if # -> INSERT YOUR CODE:
+            if F_of_x[0] > F_curr:
                 
-                # -> INSERT YOUR CODE
+                x_e = x_0 + gamma_simp * (x_r - x_0)
                 
                 #Evaluate cost of reflected point x_e
                 
-                # -> INSERT YOUR CODE
+                F_exp, acc_exp, sparse_exp = evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, x_e[2], bias_, x_e[0], x_e[1], n_class, N_train, D_b, lambda_1, lambda_2, B_cnt)
                 
-                if # -> INSERT YOUR CODE:
+                if F_exp < F_curr:
                     F_of_x[-1] = F_exp
                     Simplex[-1,:] = x_e
                     Accs[-1] = acc_exp
@@ -197,18 +197,18 @@ for optimalpoint in range(N_tradeof_points):
                     Accs[-1] = acc_curr
                     Sparsities[-1] = sparse_curr
        
-            else:
+            else: 
                 #4) Contraction x_c
-                if # -> INSERT YOUR CODE:
-                    # -> INSERT YOUR CODE:
-                elif # -> INSERT YOUR CODE::
-                    # -> INSERT YOUR CODE:
+                if F_curr < F_of_x[-1]:
+                    x_c = x_0 + rho_simp * (x_r - x_0)
+                else:
+                    x_c = x_0 + rho_simp * (Simplex[-1,:] - x_0)
                  
-                #Evaluate cost of contracted point x_e
+                #Evaluate cost of contracted point x_c
                 
-                # -> INSERT YOUR CODE:
+                F_c, acc_c, sparse_c = evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, x_c[2], bias_, x_c[0], x_c[1], n_class, N_train, D_b, lambda_1, lambda_2, B_cnt)
                 
-                if # -> INSERT YOUR CODE:
+                if F_c < F_of_x[-1] and F_c < F_curr:
                     F_of_x[-1] = F_c
                     Simplex[-1,:] = x_c
                     Accs[-1] = acc_c
@@ -216,8 +216,9 @@ for optimalpoint in range(N_tradeof_points):
                 else:
                     #4) Shrinking
                     for rep in range(1, Simplex.shape[0]):
-                        # -> INSERT YOUR CODE:
-        
+                        x_rep = Simplex[0,:] + sigma_simp * (Simplex[rep,:] - Simplex[0,:])
+                        F_of_x[rep], Accs[rep], Sparsities[rep] = evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, x_rep[2], bias_, x_rep[0], x_rep[1], n_class, N_train, D_b, lambda_1, lambda_2, B_cnt)
+                        Simplex[rep,:] = x_rep
     
     ################################## 
     #At the end of the Nelder-Mead search and training, save Accuracy and Sparsity of the best cost F(x) into the ACCS and SPARSES arrays
@@ -274,5 +275,7 @@ plt.plot(lambda_sp, ACCS)
 
 plt.figure(4)
 plt.plot(lambda_sp, SPARSES)
+
+plt.show()
 
 

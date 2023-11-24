@@ -161,7 +161,7 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, al
         
         # Apply cyclic accumulation with biases and accumulation speed beta_
 
-        HDC_cont_train_cpy = (beta_ * HDC_cont_train_cpy + bias_)% (2**B_cnt) #bundling cyclic 
+        HDC_cont_train_cpy = (beta_ * HDC_cont_train_cpy + bias_[trial_])% (2**B_cnt) #bundling cyclic 
         
         # Ternary thresholding with threshold alpha_sp:
             

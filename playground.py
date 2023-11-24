@@ -1,10 +1,34 @@
 import numpy as np
 import random
 import math
+import matplotlib.pyplot as plt
+
+Simplex = []
+N_p = 11
+for ii in range(N_p):
+    alpha_sp = np.random.uniform(0, 1)
+    gam_exp = np.random.uniform(-5, -1)
+    beta_ = np.random.uniform(0, 2) 
+    gamma = 10**gam_exp
+    simp_arr = np.array([gamma, alpha_sp, beta_])
+    Simplex.append(simp_arr*1) 
+
+Simplex = np.array(Simplex)
+cut = Simplex[:-1]
+last = Simplex[-1]
+x_0_simp = np.average(Simplex[:-1], axis= 0)
+print(x_0_simp)
+print(x_0_simp+last)
 
 
-bias = np.zeros(1)
-print(bias, bias[0])
+plt.figure(1)
+plt.plot(np.arange(10), np.arange(10), '--')
+
+plt.figure(2)
+plt.plot(np.arange(10), np.arange(10), '--')
+plt.show()
+# bias = np.zeros(1)
+# print(bias, bias[0])
 
 # n_keys = 256
 # dim = 8
