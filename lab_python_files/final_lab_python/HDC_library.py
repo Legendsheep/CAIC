@@ -76,7 +76,7 @@ def encode_HDC_RFF(img, position_table, grayscale_table, dim):
 
 
 # Train the HDC circuit on the training set : (Y_train, HDC_cont_train)
-# n_class: number of clases
+# n_class: number of classes
 # N_train: number of data points in training set
 # gamma: LS-SVM regularization
 # D_b: number of bit for HDC prototype quantization
@@ -86,15 +86,22 @@ def train_HDC_RFF(n_class, N_train, Y_train, HDC_cont_train, gamma, D_b):
     biases_q = []
     biases = []
     for cla in range(n_class):
+        Y_train_cla = Y_train.copy()
+        pos_det = Y_train_cla == cla
+        neg_det =Y_train_cla != cla
+        Y_train_cla[pos_det] = +1
+        Y_train_cla[neg_det] = -1
+        Y_train_cla = Y_train_cla.astype(int)
+
         #The steps below implement the LS-SVM training, check out the course notes, we are just implementing that
         #Beta.alpha = L -> alpha (that we want) 
         Beta = np.zeros((N_train+1, N_train+1)) #LS-SVM regression matrix
         #Fill Beta:
         
-        Beta[0,1:] = Y_train
-        Omega = np.multiply(np.outer(Y_train,Y_train), np.matmul(HDC_cont_train,np.transpose(HDC_cont_train))) + 1/gamma * np.identity(N_train)
+        Beta[0,1:] = Y_train_cla
+        Omega = np.multiply(np.outer(Y_train_cla,Y_train_cla), np.matmul(HDC_cont_train,np.transpose(HDC_cont_train))) + 1/gamma * np.identity(N_train)
         for i in range(1,N_train+1):
-            Beta[i,0] = Y_train[i-1]
+            Beta[i,0] = Y_train_cla[i-1]
             Beta[i,1:] = Omega[i-1,:]
 
         #Target vector L:
@@ -109,13 +116,13 @@ def train_HDC_RFF(n_class, N_train, Y_train, HDC_cont_train, gamma, D_b):
         
         # Get HDC prototype for class cla, still in floating point
         
-        weighting = np.multiply(Y_train,alpha[1:,0])
+        weighting = np.multiply(Y_train_cla,alpha[1:,0])
         final_HDC_centroid = np.dot(np.transpose(HDC_cont_train),weighting)
         
 
         # Quantize HDC prototype to D_b-bit
-        biggest_index = np.argmax(final_HDC_centroid)
-        bit_req = math.ceil(math.log2(final_HDC_centroid[biggest_index]))
+        biggest_index = np.argmax(np.abs(final_HDC_centroid))
+        bit_req = math.ceil(math.log2(np.abs(final_HDC_centroid[biggest_index])))
         final_HDC_centroid_q = np.round(final_HDC_centroid/2**(-D_b + bit_req),0)*2**(-D_b + bit_req) #check if this is correct later
         #Amplification factor for the LS-SVM bias
         fact = 1 
@@ -163,7 +170,7 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, al
         HDC_cont_train_cpy = np.array(one_index) * 1 + np.array(mone_index) * -1
             
 
-        Y_train = (LABELS[:N_train] - 1.5)*2
+        Y_train = LABELS[:N_train] - 1
         Y_train = Y_train.astype(int)
         
         # Train the HDC system to find the prototype hypervectors, _q meqns quantized

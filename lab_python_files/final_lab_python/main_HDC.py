@@ -59,7 +59,7 @@ N_train = int(X.shape[0]*portion)
 grayscale_table = lookup_generate(D_HDC, maxval, mode = 1) #Input encoding LUT
 position_table = lookup_generate(D_HDC, imgsize_vector, mode = 0) #weight for XOR-ing
 HDC_cont_all = np.zeros((X.shape[0], D_HDC)) #Will contain all "bundled" HDC vectors
-bias_ = # -> INSERT YOUR CODE #generate the random biases once
+bias_ =  np.zeros(Nbr_of_trials) # -> INSERT YOUR CODE #generate the random biases once
 
 for i in range(X.shape[0]):
     if i%100 == 0:
@@ -147,8 +147,13 @@ for optimalpoint in range(N_tradeof_points):
             break #Early-stopping criteria
         
         #1) sort Accs, Sparsities, F_of_x, Simplex, add best objective to array "objective_"
+        index_sort = F_of_x.argsort()
+        F_of_x = F_of_x[index_sort]
+        Accs = Accs[index_sort]
+        Sparsities = Sparsities[index_sort]
+        Simplex = Simplex[index_sort]
+        objective_.append(F_of_x[0])
         
-        # -> INSERT YOUR CODE
         
         #2) average simplex x_0 
         
