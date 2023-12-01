@@ -88,9 +88,8 @@ def train_HDC_RFF(n_class, N_train, Y_train, HDC_cont_train, gamma, D_b):
     for cla in range(n_class):
         Y_train_cla = Y_train.copy()
         pos_det = Y_train_cla == cla
-        neg_det =Y_train_cla != cla
-        Y_train_cla[pos_det] = +1
-        Y_train_cla[neg_det] = -1
+        neg_det = Y_train_cla != cla
+        Y_train_cla =  np.array(pos_det) + np.array(neg_det)*-1
         Y_train_cla = Y_train_cla.astype(int)
 
         #The steps below implement the LS-SVM training, check out the course notes, we are just implementing that
@@ -122,7 +121,11 @@ def train_HDC_RFF(n_class, N_train, Y_train, HDC_cont_train, gamma, D_b):
 
         # Quantize HDC prototype to D_b-bit
         biggest_index = np.argmax(np.abs(final_HDC_centroid))
-        bit_req = math.ceil(math.log2(np.abs(final_HDC_centroid[biggest_index])))
+        max_val = np.abs(final_HDC_centroid[biggest_index])
+        if max_val == 0:
+            bit_req = 0
+        else:
+            bit_req = math.ceil(math.log2(max_val))
         final_HDC_centroid_q = np.round(final_HDC_centroid/2**(-D_b + bit_req),0)*2**(-D_b + bit_req) #check if this is correct later
         #Amplification factor for the LS-SVM bias
         fact = 1 
@@ -136,6 +139,18 @@ def train_HDC_RFF(n_class, N_train, Y_train, HDC_cont_train, gamma, D_b):
             
         centroids.append(final_HDC_centroid*1)
         biases.append(alpha[0,0])
+
+        if (n_class == 2):
+            if np.max(np.abs(final_HDC_centroid)) == 0:
+                print("Kernel matrix badly conditionned! Ignoring...")
+                centroids_q.append(-1*np.ones(final_HDC_centroid_q.shape)) #trying to manage badly conditioned matrices, do not touch
+                biases_q.append(-1*10000)
+            else:
+                centroids_q.append(final_HDC_centroid_q*-1)
+                biases_q.append(alpha[0,0]*fact*-1)
+            centroids.append(final_HDC_centroid*-1)
+            biases.append(alpha[0,0]*-1)
+            break
         
     return centroids, biases, centroids_q, biases_q
 
@@ -149,19 +164,20 @@ def train_HDC_RFF(n_class, N_train, Y_train, HDC_cont_train, gamma, D_b):
 # n_class is the number of classes, N_train is the number training points, D_b the HDC prototype quantization bit width
 # lambda_1, lambda_2 define the balance between Accuracy and Sparsity: it returns lambda_1*Acc + lambda_2*Sparsity
 def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, alpha_sp, n_class, N_train, D_b, lambda_1, lambda_2, B_cnt):
+    gamma = 10**gamma
     local_avg = np.zeros(Nbr_of_trials)
     local_avgre = np.zeros(Nbr_of_trials)
     local_sparse = np.zeros(Nbr_of_trials)
     #Estimate F(x) over "Nbr_of_trials" trials
     for trial_ in range(Nbr_of_trials): 
-        HDC_cont_all, LABELS = shuffle(HDC_cont_all, LABELS) # Shuffle dataset for random train-test split
+        # HDC_cont_all, LABELS = shuffle(HDC_cont_all, LABELS) # Shuffle dataset for random train-test split
             
         HDC_cont_train_ = HDC_cont_all[:N_train,:] # Take training set
         HDC_cont_train_cpy = HDC_cont_train_ * 1
         
         # Apply cyclic accumulation with biases and accumulation speed beta_
 
-        HDC_cont_train_cpy = (beta_ * HDC_cont_train_cpy + bias_[trial_])% (2**B_cnt) #bundling cyclic 
+        HDC_cont_train_cpy = (beta_ * HDC_cont_train_cpy + bias_)% (2**B_cnt) #bundling cyclic 
         
         # Ternary thresholding with threshold alpha_sp:
             

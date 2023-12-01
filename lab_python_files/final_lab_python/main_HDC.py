@@ -28,9 +28,9 @@ n_class = 2
 D_b = 4 #We target 4-bit HDC prototypes
 B_cnt = 8
 maxval = 256 #The input features will be mapped from 0 to 255 (8-bit)
-D_HDC = 100 #HDC hypervector dimension
+D_HDC = 300 #HDC hypervector dimension
 portion = 0.6 #We choose 60%-40% split between train and test sets
-Nbr_of_trials = 1 #Test accuracy averaged over Nbr_of_trials runs
+Nbr_of_trials = 1 #Test accuracy averaged over Nbr_of_trials runs K-fold cross validation
 N_tradeof_points = 40 #Number of tradeoff points - use 100 
 N_fine = int(N_tradeof_points*0.4) #Number of tradeoff points in the "fine-grain" region - use 30
 #Initialize the sparsity-accuracy hyperparameter search
@@ -59,7 +59,7 @@ N_train = int(X.shape[0]*portion)
 grayscale_table = lookup_generate(D_HDC, maxval, mode = 1) #Input encoding LUT
 position_table = lookup_generate(D_HDC, imgsize_vector, mode = 0) #weight for XOR-ing
 HDC_cont_all = np.zeros((X.shape[0], D_HDC)) #Will contain all "bundled" HDC vectors
-bias_ =  np.zeros(Nbr_of_trials) # -> INSERT YOUR CODE #generate the random biases once
+bias_ = 0 # -> INSERT YOUR CODE #generate the random biases once np.zeros(Nbr_of_trials)
 
 for i in range(X.shape[0]):
     if i%100 == 0:
@@ -76,40 +76,41 @@ print("HDC bundling finished...")
 NM_iter = 350 #Maximum number of iterations
 STD_EPS = 0.002 #Threshold for early-stopping on standard deviation of the Simplex
 #Contraction, expansion,... coefficients:
-alpha_simp = 1 * 0.5
-gamma_simp = 2 * 0.6
+alpha_simp = 1 
+gamma_simp = 2
 rho_simp = 0.5
 sigma_simp = 0.5
 ################################## 
 
 ACCS = np.zeros(N_tradeof_points)
 SPARSES = np.zeros(N_tradeof_points)
-load_simplex = True # Keep it to true in order to have somewhat predictive results
+load_simplex = False # Keep it to true in order to have somewhat predictive results
+
+
+#Initialize the Simplex or either load a pre-defined one (we will use a pre-defined one in the lab for reproducibility)
+if load_simplex == False:
+    OrigSimplex = []
+    N_p = 11
+    for ii in range(N_p):
+        alpha_sp = np.random.uniform(0, 1) * ((2**B_cnt) / 2)
+        gam_exp = np.random.uniform(-5, -1)
+        beta_ = np.random.uniform(0, 2) * (2**B_cnt-1)/imgsize_vector
+        gamma = gam_exp
+        simp_arr = np.array([gamma, alpha_sp, beta_])
+        OrigSimplex.append(simp_arr*1)     
+        #np.savez("Simplex2.npz", data = Simplex)            
+else:
+    print("Loading simplex")
+    OrigSimplex = np.load("lab_python_files/final_lab_python/Simplex2.npz", allow_pickle = True)['data']
+
 for optimalpoint in range(N_tradeof_points):
     print("Progress: " + str(optimalpoint+1) + "/" + str(N_tradeof_points))
     # F(x) = 1 - (lambda_1 * Accuracy + lambda_2 * Sparsity) : TO BE MINIMIZED by Nelder-Mead
     lambda_1 = 1 # Weight of Accuracy contribution in F(x)
     lambda_2 = lambda_sp[optimalpoint] # Weight of Sparsity contribution in F(x): varies!
 
-    #Initialize the Simplex or either load a pre-defined one (we will use a pre-defined one in the lab for reproducibility)
-    if load_simplex == False:
-        Simplex = []
-        N_p = 11
-        for ii in range(N_p):
-            alpha_sp = np.random.uniform(0, 1) * ((2**B_cnt) / 2)
-            gam_exp = np.random.uniform(-5, -1)
-            beta_ = np.random.uniform(0, 2) * (2**B_cnt-1)/imgsize_vector
-            gamma = 10**gam_exp
-            simp_arr = np.array([gamma, alpha_sp, beta_])
-            Simplex.append(simp_arr*1)  
-            
-        #np.savez("Simplex2.npz", data = Simplex)
-             
-    else:
-        print("Loading simplex")
-        Simplex = np.load("lab_python_files/final_lab_python/Simplex2.npz", allow_pickle = True)['data']
 
-    
+    Simplex = OrigSimplex
     #Compute the cost F(x) associated to each point in the Initial Simplex
     F_of_x = []
     Accs = []
@@ -143,7 +144,7 @@ for optimalpoint in range(N_tradeof_points):
     for iter_ in range(NM_iter):
 
         STD_.append(np.std(F_of_x))
-        if np.std(F_of_x) < STD_EPS and 100 < iter_:
+        if np.std(F_of_x) < STD_EPS and 10 < iter_:
             break #Early-stopping criteria
         
         #1) sort Accs, Sparsities, F_of_x, Simplex, add best objective to array "objective_"
@@ -166,7 +167,7 @@ for optimalpoint in range(N_tradeof_points):
         #Evaluate cost of reflected point x_r
         
         F_curr, acc_curr, sparse_curr = evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, x_r[2], bias_, x_r[0], x_r[1], n_class, N_train, D_b, lambda_1, lambda_2, B_cnt)
-        
+        F_curr, acc_curr, sparse_curr = 1 - np.mean(F_curr), np.mean(acc_curr), np.mean(sparse_curr)
         if F_curr < F_of_x[-2] and  F_of_x[0] <= F_curr:
             F_of_x[-1] = F_curr
             Simplex[-1,:] = x_r
@@ -185,7 +186,7 @@ for optimalpoint in range(N_tradeof_points):
                 #Evaluate cost of reflected point x_e
                 
                 F_exp, acc_exp, sparse_exp = evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, x_e[2], bias_, x_e[0], x_e[1], n_class, N_train, D_b, lambda_1, lambda_2, B_cnt)
-                
+                F_exp, acc_exp, sparse_exp = 1 - np.mean(F_exp), np.mean(acc_exp), np.mean(sparse_exp)
                 if F_exp < F_curr:
                     F_of_x[-1] = F_exp
                     Simplex[-1,:] = x_e
@@ -207,7 +208,7 @@ for optimalpoint in range(N_tradeof_points):
                 #Evaluate cost of contracted point x_c
                 
                 F_c, acc_c, sparse_c = evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, x_c[2], bias_, x_c[0], x_c[1], n_class, N_train, D_b, lambda_1, lambda_2, B_cnt)
-                
+                F_c, acc_c, sparse_c = 1 - np.mean(F_c), np.mean(acc_c), np.mean(sparse_c)
                 if F_c < F_of_x[-1] and F_c < F_curr:
                     F_of_x[-1] = F_c
                     Simplex[-1,:] = x_c
@@ -218,6 +219,7 @@ for optimalpoint in range(N_tradeof_points):
                     for rep in range(1, Simplex.shape[0]):
                         x_rep = Simplex[0,:] + sigma_simp * (Simplex[rep,:] - Simplex[0,:])
                         F_of_x[rep], Accs[rep], Sparsities[rep] = evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, x_rep[2], bias_, x_rep[0], x_rep[1], n_class, N_train, D_b, lambda_1, lambda_2, B_cnt)
+                        F_of_x[rep], Accs[rep], Sparsities[rep] = 1 - np.mean(F_of_x[rep]), np.mean(Accs[rep]), np.mean(Sparsities[rep])
                         Simplex[rep,:] = x_rep
     
     ################################## 
