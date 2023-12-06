@@ -99,10 +99,11 @@ def train_HDC_RFF(n_class, N_train, Y_train, HDC_cont_train, gamma, D_b):
         
         Beta[0,1:] = Y_train_cla
         Omega = np.multiply(np.outer(Y_train_cla,Y_train_cla), np.matmul(HDC_cont_train,np.transpose(HDC_cont_train))) + 1/gamma * np.identity(N_train)
-        for i in range(1,N_train+1):
-            Beta[i,0] = Y_train_cla[i-1]
-            Beta[i,1:] = Omega[i-1,:]
-
+        # for i in range(1,N_train+1):
+        #     Beta[i,0] = Y_train_cla[i-1]
+        #     Beta[i,1:] = Omega[i-1,:]
+        Beta[1:,0] = Y_train_cla
+        Beta[1:,1:] = Omega
         #Target vector L:
             
         L = np.ones((N_train+1,1))
@@ -120,8 +121,8 @@ def train_HDC_RFF(n_class, N_train, Y_train, HDC_cont_train, gamma, D_b):
         
 
         # Quantize HDC prototype to D_b-bit
-        biggest_index = np.argmax(np.abs(final_HDC_centroid))
-        max_val = np.abs(final_HDC_centroid[biggest_index])
+        biggest_val = np.max(np.abs(final_HDC_centroid))
+        max_val = np.abs(biggest_val)
         if max_val == 0:
             bit_req = 0
         else:
@@ -163,16 +164,20 @@ def train_HDC_RFF(n_class, N_train, Y_train, HDC_cont_train, gamma, D_b):
 # alpha_sp is the encoding threshold
 # n_class is the number of classes, N_train is the number training points, D_b the HDC prototype quantization bit width
 # lambda_1, lambda_2 define the balance between Accuracy and Sparsity: it returns lambda_1*Acc + lambda_2*Sparsity
-def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, alpha_sp, n_class, N_train, D_b, lambda_1, lambda_2, B_cnt):
+def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, alpha_sp, n_class, N_train, D_b, lambda_1, lambda_2, B_cnt,dim_HDC):
     gamma = 10**gamma
     local_avg = np.zeros(Nbr_of_trials)
     local_avgre = np.zeros(Nbr_of_trials)
     local_sparse = np.zeros(Nbr_of_trials)
+    if dim_HDC > 1000:
+        dim_HDC = 1000
+    elif dim_HDC < 10:
+        dim_HDC = 10
     #Estimate F(x) over "Nbr_of_trials" trials
     for trial_ in range(Nbr_of_trials): 
         # HDC_cont_all, LABELS = shuffle(HDC_cont_all, LABELS) # Shuffle dataset for random train-test split
             
-        HDC_cont_train_ = HDC_cont_all[:N_train,:] # Take training set
+        HDC_cont_train_ = HDC_cont_all[:N_train,:round(dim_HDC)] # Take training set
         HDC_cont_train_cpy = HDC_cont_train_ * 1
         
         # Apply cyclic accumulation with biases and accumulation speed beta_
@@ -193,7 +198,7 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, al
         centroids, biases, centroids_q, biases_q = train_HDC_RFF(n_class, N_train, Y_train, HDC_cont_train_cpy, gamma, D_b)
         
         # Do the same encoding steps with the test set
-        HDC_cont_test_ = HDC_cont_all[N_train:,:]
+        HDC_cont_test_ = HDC_cont_all[N_train:,:round(dim_HDC)]
         HDC_cont_test_cpy = HDC_cont_test_ * 1
         
         # Apply cyclic accumulation with biases and accumulation speed beta_
@@ -214,7 +219,8 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, al
         Acc = compute_accuracy(HDC_cont_test_cpy, Y_test, centroids_q, biases_q)
         sparsity_HDC_centroid = np.array(centroids_q).flatten() 
         nbr_zero = np.sum((sparsity_HDC_centroid == 0).astype(int))
-        SPH = nbr_zero/(sparsity_HDC_centroid.shape[0])
+        # SPH = nbr_zero/(sparsity_HDC_centroid.shape[0])
+        SPH = (nbr_zero-n_class*dim_HDC)/(1000) #dont think this is correct? -n_class*dim_HDC
         local_avg[trial_] = lambda_1 * Acc + lambda_2 * SPH #Cost F(x) is defined as 1 - this quantity
         local_avgre[trial_] = Acc
         local_sparse[trial_] = SPH
