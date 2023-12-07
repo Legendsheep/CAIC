@@ -41,11 +41,11 @@ def compute_accuracy(HDC_cont_test, Y_test, centroids, biases):
 # when mode == 0, all elements are generated with the same statistics (probability of having +1 always = 0.5)
 # when mode == 1, all the probability of having +1 scales with an input "key" i.e., when the inputs to the HDC encoded are coded
 # on e.g., 8-bit, we have 256 possible keys
-def lookup_generate(dim, n_keys, mode = 1):
+def lookup_generate(dim, n_keys, mode = 1, m0chance = .5):
     arr = np.empty((n_keys,dim), int)
     if mode == 0:
         for i in range(n_keys):
-            random_arr = [-1 + 2*(random.uniform(0, 1) <= .5) for x in range(dim)]
+            random_arr = [-1 + 2*(random.uniform(0, 1) <= m0chance) for x in range(dim)]
             arr[i] =  np.array([random_arr])
     else:
         B_in = math.log2(n_keys)
@@ -232,4 +232,44 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, al
         local_avgre[trial_] = Acc
         local_sparse[trial_] = SPH
         
-    return local_avg, local_avgre, local_sparse
+    return local_avg, local_avgre, local_sparse, centroids[0]
+
+def genetic_weights(D_HDC,imgsize_vector, Np,  grayscale_table, mut_fact =0, prev_table = None, prev_centroid = None):
+    reuse_index = round(Np*D_HDC)
+    position_table = lookup_generate(D_HDC, imgsize_vector, mode = 0) # n_keys x dim
+    grayscale_table_cp = grayscale_table *1
+    if not (prev_table is None):
+        abs_centr = np.abs(prev_centroid)
+        index_sort = abs_centr.argsort()
+        prev_table_cp = prev_table*1
+        prev_table_cp = prev_table_cp[:,index_sort]
+        grayscale_table_cp = grayscale_table_cp[:,index_sort]
+        position_table[:,:reuse_index] = prev_table_cp[:,:reuse_index]
+        # children = children_maker(prev_table_cp[:,:reuse_index],imgsize_vector,reuse_index,reuse_index)
+        # position_table[:,reuse_index:3*reuse_index] = children
+    if mut_fact != 0:
+        random_mut = lookup_generate(D_HDC, imgsize_vector, 0, 1-mut_fact)
+        position_table = np.multiply(position_table,random_mut)
+    return position_table , grayscale_table_cp
+
+def children_maker(parents, imgsize_vector,reuse_index,n_children):
+    children = np.zeros(imgsize_vector)
+    i=0
+    while i < n_children:
+        parent1 = random.randint(0,reuse_index-1)
+        parent2 = random.randint(0,reuse_index-1)
+        if parent1 == parent2:
+            continue
+        else:
+            slice_idx = random.randint(0,imgsize_vector-1)
+            parents[:slice_idx,parent1]
+            parents[slice_idx:,parent2]
+            child1 =   np.concatenate((parents[:slice_idx,parent1], parents[slice_idx:,parent2]), axis=0)
+            child2 =   np.concatenate((parents[:slice_idx,parent2], parents[slice_idx:,parent1]), axis=0)
+            # genes_sel = np.random.choice([0, 1], size=imgsize_vector)
+            # child = np.dot(genes_sel,parents[parent1]) + np.dot(1 - genes_sel,parents[parent2])
+        children = np.concatenate((children,child1))
+        children = np.concatenate((children,child2))
+        i +=1
+    children = children[30:]
+    return children.reshape((30,n_children*2))
