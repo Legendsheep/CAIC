@@ -169,26 +169,33 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, al
     local_avg = np.zeros(Nbr_of_trials)
     local_avgre = np.zeros(Nbr_of_trials)
     local_sparse = np.zeros(Nbr_of_trials)
-    if dim_HDC > 1000:
-        dim_HDC = 1000
-    elif dim_HDC < 10:
-        dim_HDC = 10
+    # if dim_HDC > 1000:
+    #     dim_HDC = 1000
+    # elif dim_HDC < 10:
+    #     dim_HDC = 10
     #Estimate F(x) over "Nbr_of_trials" trials
     for trial_ in range(Nbr_of_trials): 
         # HDC_cont_all, LABELS = shuffle(HDC_cont_all, LABELS) # Shuffle dataset for random train-test split
-            
-        HDC_cont_train_ = HDC_cont_all[:N_train,:round(dim_HDC)] # Take training set
-        HDC_cont_train_cpy = HDC_cont_train_ * 1
+        HDC_cont_all_cpy = HDC_cont_all * 1
+
+        # Take training set
         
         # Apply cyclic accumulation with biases and accumulation speed beta_
 
-        HDC_cont_train_cpy = (beta_ * HDC_cont_train_cpy + bias_)% (2**B_cnt) #bundling cyclic 
+        HDC_cont_all_cpy = (beta_ * HDC_cont_all_cpy + bias_)% (2**(B_cnt+1)) #bundling cyclic 
+        updown = np.array((HDC_cont_all_cpy//2**(B_cnt)))
+        HDC_cont_all_cpy = (HDC_cont_all_cpy)% (2**(B_cnt)) #bundling cyclic 
         
         # Ternary thresholding with threshold alpha_sp:
             
-        one_index = HDC_cont_train_cpy - (2**(B_cnt-1)) > alpha_sp
-        mone_index = HDC_cont_train_cpy - (2**(B_cnt-1)) < -alpha_sp
-        HDC_cont_train_cpy = np.array(one_index) * 1 + np.array(mone_index) * -1
+        one_index = HDC_cont_all_cpy - (2**(B_cnt-1)) > alpha_sp
+        mone_index = HDC_cont_all_cpy - (2**(B_cnt-1)) < -alpha_sp
+        # HDC_cont_all_cpy = np.array(one_index) * 1 + np.array(mone_index) * -1
+        HDC_cont_all_cpy = np.multiply(np.array(one_index) * 1 + np.array(mone_index) * -1,-1 + 2*updown)
+
+        HDC_cont_train_cpy = HDC_cont_all_cpy[:N_train] 
+        HDC_cont_test_cpy = HDC_cont_all_cpy[N_train:]
+
             
 
         Y_train = LABELS[:N_train] - 1
@@ -198,19 +205,19 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, al
         centroids, biases, centroids_q, biases_q = train_HDC_RFF(n_class, N_train, Y_train, HDC_cont_train_cpy, gamma, D_b)
         
         # Do the same encoding steps with the test set
-        HDC_cont_test_ = HDC_cont_all[N_train:,:round(dim_HDC)]
-        HDC_cont_test_cpy = HDC_cont_test_ * 1
-        
-        # Apply cyclic accumulation with biases and accumulation speed beta_
 
-        HDC_cont_test_cpy = (beta_ * HDC_cont_test_cpy + bias_)% (2**B_cnt) #bundling cyclic 
+        # HDC_cont_test_cpy = HDC_cont_test_ * 1
+        
+        # # Apply cyclic accumulation with biases and accumulation speed beta_
+
+        # HDC_cont_test_cpy = (beta_ * HDC_cont_test_cpy + bias_)% (2**B_cnt) #bundling cyclic 
         
         
-        # Ternary thresholding with threshold alpha_sp:
+        # # Ternary thresholding with threshold alpha_sp:
             
-        one_index = HDC_cont_test_cpy - (2**(B_cnt-1)) > alpha_sp
-        mone_index = HDC_cont_test_cpy - (2**(B_cnt-1)) < -alpha_sp
-        HDC_cont_test_cpy = np.array(one_index) * 1 + np.array(mone_index) * -1
+        # one_index = HDC_cont_test_cpy - (2**(B_cnt-1)) > alpha_sp
+        # mone_index = HDC_cont_test_cpy - (2**(B_cnt-1)) < -alpha_sp
+        # HDC_cont_test_cpy = np.array(one_index) * 1 + np.array(mone_index) * -1
         
         Y_test = LABELS[N_train:] - 1
         Y_test = Y_test.astype(int)

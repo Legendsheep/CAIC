@@ -31,7 +31,7 @@ maxval = 256 #The input features will be mapped from 0 to 255 (8-bit)
 D_HDC = 1000 #HDC hypervector dimension
 portion = 0.6 #We choose 60%-40% split between train and test sets
 Nbr_of_trials = 1 #Test accuracy averaged over Nbr_of_trials runs K-fold cross validation
-N_tradeof_points = 10 #Number of tradeoff points - use 100 
+N_tradeof_points = 20 #Number of tradeoff points - use 100 
 N_fine = int(N_tradeof_points*0.4) #Number of tradeoff points in the "fine-grain" region - use 30
 #Initialize the sparsity-accuracy hyperparameter search
 lambda_fine = np.linspace(-0.2, 0.2, N_tradeof_points-N_fine)
@@ -90,15 +90,16 @@ load_simplex = False # Keep it to true in order to have somewhat predictive resu
 #Initialize the Simplex or either load a pre-defined one (we will use a pre-defined one in the lab for reproducibility)
 if load_simplex == False:
     OrigSimplex = []
-    N_p = 11
+    N_p = 20
     for ii in range(N_p):
         alpha_sp = np.random.uniform(0, 1) * ((2**B_cnt) / 2)
         gam_exp = np.random.uniform(-5, -1)
         beta_ = np.random.uniform(0, 2) * (2**B_cnt-1)/imgsize_vector
         gamma = gam_exp
         bias_ = np.random.uniform(0, 2) * (2**B_cnt-1)/imgsize_vector
-        dim_HDC = np.random.uniform(10, D_HDC)
-        simp_arr = np.array([gamma, alpha_sp, beta_, bias_,dim_HDC])
+        D_b = np.random.uniform(1, 8)
+        # dim_HDC = np.random.uniform(10, D_HDC)
+        simp_arr = np.array([gamma, alpha_sp, beta_, bias_,D_b])
         OrigSimplex.append(simp_arr*1)     
         #np.savez("Simplex2.npz", data = Simplex)            
 else:
@@ -115,13 +116,14 @@ for init_simp in range(len(OrigSimplex)):
         alpha_sp = simp_arr[1] #Threshold of accumulators
         beta_ = simp_arr[2] #incrementation step of accumulators
         bias_ = simp_arr[3]
-        dim_HDC = simp_arr[4]
+        D_b = simp_arr[4]
+        # dim_HDC = simp_arr[4]
         ############### F(x) for Nelder-Mead with x = [gamma, alpha_sp, beta] ###################
         #The function "evaluate_F_of_x_2" performs:
         #    a) thresholding and encoding of bundled dataset into final HDC "ternary" vectors (-1, 0, +1)
         #    b) Training and testing the HDC system on "Nbr_of_trials" trials (with different random dataset splits)
         #    c) Returns lambda_1*Acc + lambda_2*Sparsity, Accuracy and Sparsity for each trials
-        local_avg, local_avgre, local_sparse = evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, alpha_sp, n_class, N_train, D_b, lambda_1, lambda_2, B_cnt,dim_HDC)
+        local_avg, local_avgre, local_sparse = evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, alpha_sp, n_class, N_train, D_b, lambda_1, lambda_2, B_cnt,D_HDC)
         AccsOrig.append(np.mean(local_avgre))
         SparsitiesOrig.append(np.mean(local_sparse))
 
@@ -190,7 +192,7 @@ for optimalpoint in range(N_tradeof_points):
         
         #Evaluate cost of reflected point x_r
         
-        F_curr, acc_curr, sparse_curr = evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, x_r[2], x_r[3], x_r[0], x_r[1], n_class, N_train, D_b, lambda_1, lambda_2, B_cnt, x_r[4])
+        F_curr, acc_curr, sparse_curr = evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, x_r[2], x_r[3], x_r[0], x_r[1], n_class, N_train, x_r[4], lambda_1, lambda_2, B_cnt, D_HDC)
         F_curr, acc_curr, sparse_curr = 1 - np.mean(F_curr), np.mean(acc_curr), np.mean(sparse_curr)
         if F_curr < F_of_x[-2] and  F_of_x[0] <= F_curr:
             F_of_x[-1] = F_curr
@@ -209,7 +211,7 @@ for optimalpoint in range(N_tradeof_points):
                 
                 #Evaluate cost of reflected point x_e
                 
-                F_exp, acc_exp, sparse_exp = evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, x_e[2], x_e[3], x_e[0], x_e[1], n_class, N_train, D_b, lambda_1, lambda_2, B_cnt, x_e[4])
+                F_exp, acc_exp, sparse_exp = evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, x_e[2], x_e[3], x_e[0], x_e[1], n_class, N_train, x_e[4], lambda_1, lambda_2, B_cnt, D_HDC)
                 F_exp, acc_exp, sparse_exp = 1 - np.mean(F_exp), np.mean(acc_exp), np.mean(sparse_exp)
                 if F_exp < F_curr:
                     F_of_x[-1] = F_exp
@@ -231,7 +233,7 @@ for optimalpoint in range(N_tradeof_points):
                  
                 #Evaluate cost of contracted point x_c
                 
-                F_c, acc_c, sparse_c = evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, x_c[2], x_c[3], x_c[0], x_c[1], n_class, N_train, D_b, lambda_1, lambda_2, B_cnt, x_c[4])
+                F_c, acc_c, sparse_c = evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, x_c[2], x_c[3], x_c[0], x_c[1], n_class, N_train, x_c[4], lambda_1, lambda_2, B_cnt, D_HDC)
                 F_c, acc_c, sparse_c = 1 - np.mean(F_c), np.mean(acc_c), np.mean(sparse_c)
                 if F_c < F_of_x[-1] and F_c < F_curr:
                     F_of_x[-1] = F_c
@@ -242,7 +244,7 @@ for optimalpoint in range(N_tradeof_points):
                     #4) Shrinking
                     for rep in range(1, Simplex.shape[0]):
                         x_rep = Simplex[0,:] + sigma_simp * (Simplex[rep,:] - Simplex[0,:])
-                        F_of_x[rep], Accs[rep], Sparsities[rep] = evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, x_rep[2], x_rep[3], x_rep[0], x_rep[1], n_class, N_train, D_b, lambda_1, lambda_2, B_cnt, x_rep[4])
+                        F_of_x[rep], Accs[rep], Sparsities[rep] = evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, x_rep[2], x_rep[3], x_rep[0], x_rep[1], n_class, N_train, x_rep[4], lambda_1, lambda_2, B_cnt, D_HDC)
                         F_of_x[rep], Accs[rep], Sparsities[rep] = 1 - np.mean(F_of_x[rep]), np.mean(Accs[rep]), np.mean(Sparsities[rep])
                         Simplex[rep,:] = x_rep
     
@@ -268,10 +270,10 @@ Your code above should return:
     
 """
 #Plot tradeoff curve between Accuracy and Sparsity
-SPARSES_ = SPARSES[SPARSES > -2] 
-ACCS_ = ACCS[SPARSES > -2]
+SPARSES_ = SPARSES[SPARSES > -10] 
+ACCS_ = ACCS[SPARSES > -10]
 plt.figure(1)
-plt.plot(SPARSES_, ACCS_, 'x', markersize = 10)
+plt.plot(SPARSES_*500, ACCS_, 'x', markersize = 10)
 plt.grid('on')
 plt.xlabel("Sparsity")
 plt.ylabel("Accuracy")
@@ -283,7 +285,7 @@ regr = SVR(C=1.0, epsilon = 0.005)
 regr.fit(X, y)
 X_pred = np.linspace(np.min(SPARSES_), np.max(SPARSES_), 100).reshape(-1, 1)
 Y_pred = regr.predict(X_pred)
-plt.plot(X_pred, Y_pred, '--')
+plt.plot(X_pred*500, Y_pred, '--')
 
 #Plot the evolution of the Nelder-Mead objective and the standard deviation of the simplex for the last run
 plt.figure(2)
