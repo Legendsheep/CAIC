@@ -28,7 +28,7 @@ n_class = 2
 D_b = 4 #We target 4-bit HDC prototypes
 B_cnt = 8
 maxval = 256 #The input features will be mapped from 0 to 255 (8-bit)
-D_HDC = 1000 #HDC hypervector dimension
+D_HDC = 600 #HDC hypervector dimension
 portion = 0.6 #We choose 60%-40% split between train and test sets
 Nbr_of_trials = 1 #Test accuracy averaged over Nbr_of_trials runs K-fold cross validation
 N_tradeof_points = 20 #Number of tradeoff points - use 100 
@@ -56,6 +56,23 @@ N_train = int(X.shape[0]*portion)
 """
 3) Generate HDC LUTs and bundle dataset
 """
+grayscale_table = []
+position_table = []
+import csv # best boy import 97.4%
+with open("enc.csv", 'r') as file:
+    csvreader = csv.reader(file)
+    i = 0
+    for row in csvreader:
+        grayscale_table.append([int(elem) for elem in row])
+        i += 1
+with open("weigth.csv", 'r') as file:
+    csvreader2 = csv.reader(file)
+    i = 0
+    for row2 in csvreader2:
+        position_table.append([int(elem) for elem in row2])
+        i += 1
+grayscale_table = np.array(grayscale_table)
+position_table = np.array(position_table)
 grayscale_table = lookup_generate(D_HDC, maxval, mode = 1) #Input encoding LUT
 position_table = lookup_generate(D_HDC, imgsize_vector, mode = 0) #weight for XOR-ing
 HDC_cont_all = np.zeros((X.shape[0], D_HDC)) #Will contain all "bundled" HDC vectors

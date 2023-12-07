@@ -285,7 +285,7 @@ with open("weigth.csv","w",newline="") as file:
         writer.writerow(prev_weights[k])
 with open("enc.csv","w",newline="") as file:
     writer = csv.writer(file)
-    for k in range(imgsize_vector):
+    for k in range(2**B_cnt):
         writer.writerow(grayscale_table_best[k])
 """
 Plot results (DO NOT TOUCH CODE)
