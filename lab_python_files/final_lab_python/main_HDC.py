@@ -13,7 +13,7 @@ ir. Ali Safa, ir. Sergio Massaioli, Prof. Georges Gielen (MICAS-IMEC-KU Leuven)
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.utils import shuffle
-from HDC_library import lookup_generate, encode_HDC_RFF, evaluate_F_of_x
+from HDC_library import lookup_generate, encode_HDC_RFF, evaluate_F_of_x, PCA
 plt.close('all')
 
 """
@@ -31,11 +31,11 @@ maxval = 256 #The input features will be mapped from 0 to 255 (8-bit)
 D_HDC = 600 #HDC hypervector dimension
 portion = 0.6 #We choose 60%-40% split between train and test sets
 Nbr_of_trials = 1 #Test accuracy averaged over Nbr_of_trials runs K-fold cross validation
-N_tradeof_points = 20 #Number of tradeoff points - use 100 
+N_tradeof_points = 30 #Number of tradeoff points - use 100 
 N_fine = int(N_tradeof_points*0.4) #Number of tradeoff points in the "fine-grain" region - use 30
 #Initialize the sparsity-accuracy hyperparameter search
-lambda_fine = np.linspace(-0.2, 0.2, N_tradeof_points-N_fine)
-lambda_sp = np.concatenate((lambda_fine, np.linspace(-1, -0.2, N_fine//2), np.linspace(0.2, 1, N_fine//2)))
+lambda_fine = np.linspace(0, 0.2, N_tradeof_points-N_fine)
+lambda_sp = np.concatenate((lambda_fine, np.linspace(0.2, 1, N_fine)))
 N_tradeof_points = lambda_sp.shape[0]
     
 """
@@ -48,8 +48,10 @@ LABELS = DATASET[:,1]
 LABELS[LABELS == 'M'] = 1
 LABELS[LABELS == 'B'] = 2
 LABELS = LABELS.astype(float)
-X = X.T / np.max(X, axis = 1)
-X, LABELS = shuffle(X.T, LABELS)
+# X, LABELS = shuffle(X.T, LABELS)
+X = PCA(X,5)
+X = X.T / np.max(np.abs(X), axis = 1)
+X = X.T
 imgsize_vector = X.shape[1]
 N_train = int(X.shape[0]*portion)
 
@@ -73,15 +75,15 @@ with open("weigth.csv", 'r') as file:
         i += 1
 grayscale_table = np.array(grayscale_table)
 position_table = np.array(position_table)
-grayscale_table = lookup_generate(D_HDC, maxval, mode = 1) #Input encoding LUT
-position_table = lookup_generate(D_HDC, imgsize_vector, mode = 0) #weight for XOR-ing
+# grayscale_table = lookup_generate(D_HDC, maxval, mode = 1) #Input encoding LUT
+# position_table = lookup_generate(D_HDC, imgsize_vector, mode = 0) #weight for XOR-ing
 HDC_cont_all = np.zeros((X.shape[0], D_HDC)) #Will contain all "bundled" HDC vectors
 bias_ = 0 # -> INSERT YOUR CODE #generate the random biases once np.zeros(Nbr_of_trials)
 
 for i in range(X.shape[0]):
     if i%100 == 0:
         print(str(i) + "/" + str(X.shape[0]))
-    HDC_cont_all[i,:] = encode_HDC_RFF(np.round((maxval - 1) * X[i,:]).astype(int), position_table, grayscale_table, D_HDC)
+    HDC_cont_all[i,:] = encode_HDC_RFF(np.round((maxval/2 - 1) * X[i,:]).astype(int), position_table, grayscale_table, D_HDC)
  
 print("HDC bundling finished...")
 
@@ -107,7 +109,7 @@ load_simplex = False # Keep it to true in order to have somewhat predictive resu
 #Initialize the Simplex or either load a pre-defined one (we will use a pre-defined one in the lab for reproducibility)
 if load_simplex == False:
     OrigSimplex = []
-    N_p = 20
+    N_p = 30
     for ii in range(N_p):
         alpha_sp = np.random.uniform(0, 1) * ((2**B_cnt) / 2)
         gam_exp = np.random.uniform(-5, -1)
@@ -151,7 +153,7 @@ for optimalpoint in range(N_tradeof_points):
     lambda_2 = lambda_sp[optimalpoint] # Weight of Sparsity contribution in F(x): varies!
 
 
-    Simplex = OrigSimplex
+    Simplex = OrigSimplex*1
     #Compute the cost F(x) associated to each point in the Initial Simplex
     Accs = np.array(AccsOrig)
     Sparsities = np.array(SparsitiesOrig)

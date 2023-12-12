@@ -232,7 +232,7 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, al
         local_avgre[trial_] = Acc
         local_sparse[trial_] = SPH
         
-    return local_avg, local_avgre, local_sparse, centroids[0]
+    return local_avg, local_avgre, local_sparse # , centroids[0]
 
 def genetic_weights(D_HDC,imgsize_vector, Np,  grayscale_table, mut_fact =0, prev_table = None, prev_centroid = None):
     reuse_index = round(Np*D_HDC)
@@ -273,3 +273,18 @@ def children_maker(parents, imgsize_vector,reuse_index,n_children):
         i +=1
     children = children[30:]
     return children.reshape((30,n_children*2))
+
+def PCA(matrix, nb):
+    std = matrix.std(axis = 0)
+    normilized = (matrix - matrix.mean(axis = 0)) / matrix.std(axis = 0)
+    for i in  range(matrix.shape[1]):
+        if std[i] == 0:
+            normilized[:,i] = np.zeros(matrix.shape[0])
+    cov = np.cov(normilized, rowvar = False)
+    eigval, eigvec = np.linalg.eig(cov)
+    idx = np.argsort(eigval)[::-1]
+    eigval = eigval[idx]
+    eigvec = eigvec[:,idx]
+    pcad =  np.matmul(normilized, eigvec[:,:])
+    pcad[:,nb:] = np.zeros((matrix.shape[0],matrix.shape[1]-nb))
+    return pcad
