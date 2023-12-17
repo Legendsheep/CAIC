@@ -4,7 +4,7 @@ from sklearn.utils import shuffle
 
 
 def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, alpha_sp, n_class, N_train, D_b, lambda_1, lambda_2, B_cnt):
-    return - (beta_-1)**2 - gamma**2 - (alpha_sp-2)**2, 0, 0
+    return - (beta_-1)**2 - 0**2 - (alpha_sp-2)**2, 0, 0
 
 B_cnt = 8
 load_simplex = False
@@ -20,11 +20,11 @@ sigma_simp = 0.5
 #Initialize the Simplex or either load a pre-defined one (we will use a pre-defined one in the lab for reproducibility)
 if load_simplex == False:
     Simplex = []
-    N_p = 5
+    N_p = 6
     for ii in range(N_p):
-        alpha_sp = np.random.uniform(-20, 20)
-        beta_ = np.random.uniform(-20, 20)
-        gamma = np.random.uniform(-20, 20)
+        alpha_sp = np.random.uniform(-5, 5)
+        beta_ = np.random.uniform(-5, 5)
+        gamma = np.random.uniform(-5, 5)
         simp_arr = np.array([gamma, alpha_sp, beta_])
         Simplex.append(simp_arr*1)  
         
@@ -34,6 +34,12 @@ else:
     print("Loading simplex")
     Simplex = np.load("lab_python_files/final_lab_python/Simplex2.npz", allow_pickle = True)['data']
 
+a = np.arange(-5, 5,.0125)
+b = np.arange(-5, 5,.0125)
+X, Y = np.meshgrid(a, b)
+h = (X-2)**2 + (Y-1)**2
+
+# cs = plt.contour(a,b,h, levels=10, extend='both') #[.5,1, 2, 4, 8, 16, 32,64]
 
 #Compute the cost F(x) associated to each point in the Initial Simplex
 F_of_x = []
@@ -66,9 +72,15 @@ STD_ = [] #Will contain the standard deviation of all F(x) as the Nelder-Mead se
 
 # For the details about the Nelder-Mead step, please refer to the course notes / reference, we are simply implementing that
 for iter_ in range(NM_iter):
-
+    plt.contour(a,b,h, levels=[.5,1, 2, 4, 8, 16, 32,64], extend='both') #[.5,1, 2, 4, 8, 16, 32,64]
+    plt.scatter(Simplex[:,1],Simplex[:,2])
+    plt.xlim(-5, 5)
+    plt.ylim(-5, 5)
+    plt.xlabel("s1")
+    plt.ylabel("s2")
+    plt.show()
     STD_.append(np.std(F_of_x))
-    if np.std(F_of_x) < STD_EPS and 40 < iter_:
+    if np.std(F_of_x) < STD_EPS and 20 < iter_:
         break #Early-stopping criteria
     
     #1) sort Accs, Sparsities, F_of_x, Simplex, add best objective to array "objective_"
@@ -156,7 +168,7 @@ Sparsities = Sparsities[idx]
 Simplex = Simplex[idx, :]    
 ################################## 
 
-assert(abs(Simplex[0,0] - 0) < .05)
+# assert(abs(Simplex[0,0] - 0) < .05) # change 0 to gamma in F(x)
 assert(abs(Simplex[0,1] - 2) < .05)
 assert(abs(Simplex[0,2] - 1) < .05)
 

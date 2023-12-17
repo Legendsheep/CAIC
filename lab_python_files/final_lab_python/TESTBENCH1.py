@@ -2,7 +2,7 @@ from HDC_library import lookup_generate, encode_HDC_RFF, evaluate_F_of_x
 import numpy as np
 
 
-dim = 20000 # high dimension for higher averaging
+dim = 200000 # high dimension for higher averaging
 n_keys = 16
 
 
@@ -11,16 +11,19 @@ n_keys = 16
 weights = lookup_generate(dim,n_keys,0)
 grayscale = lookup_generate(dim,n_keys,1)
 
+assert(weights.shape[0] == n_keys)
+assert(weights.shape[1] == dim)
+assert(grayscale.shape[0] == n_keys)
+assert(grayscale.shape[1] == dim)
 p_weights = 1/2 + np.sum(weights)/(dim*n_keys)/2 # should be approx. equal to .5
 assert(abs(p_weights - .5) < .005)
+
 
 # the probability should increase with increasing index
 p_gray = [0] * n_keys
 for key in range(n_keys):
     p_gray[key] = 1/2 + np.sum(grayscale[key])/(dim)/2
-copy_gray = p_gray.copy()
-p_gray.sort()
-assert(copy_gray == p_gray)
+    assert(abs(p_gray[key] - key/(n_keys - 1)) < .005)
 
 
 # Test encode_HDC_RFF
