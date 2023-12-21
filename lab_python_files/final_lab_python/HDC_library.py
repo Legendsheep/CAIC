@@ -232,7 +232,7 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, al
         local_avgre[trial_] = Acc
         local_sparse[trial_] = SPH
         
-    return local_avg, local_avgre, local_sparse #, centroids[0]
+    return local_avg, local_avgre, local_sparse, centroids[0]
 
 def genetic_weights(D_HDC,imgsize_vector, Np,  grayscale_table, mut_fact =0, prev_table = None, prev_centroid = None):
     reuse_index = round(Np*D_HDC)

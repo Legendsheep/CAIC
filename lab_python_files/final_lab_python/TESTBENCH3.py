@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.utils import shuffle
 
+Show_graphs = False # turns on/off nelder mead visualisation
 
 def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, alpha_sp, n_class, N_train, D_b, lambda_1, lambda_2, B_cnt):
     return - (beta_-1)**2 - 0**2 - (alpha_sp-2)**2, 0, 0
@@ -78,7 +79,8 @@ for iter_ in range(NM_iter):
     plt.ylim(-5, 5)
     plt.xlabel("s1")
     plt.ylabel("s2")
-    plt.show()
+    if Show_graphs:
+        plt.show()
     STD_.append(np.std(F_of_x))
     if np.std(F_of_x) < STD_EPS and 20 < iter_:
         break #Early-stopping criteria

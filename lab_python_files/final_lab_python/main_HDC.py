@@ -142,7 +142,7 @@ for init_simp in range(len(OrigSimplex)):
         #    a) thresholding and encoding of bundled dataset into final HDC "ternary" vectors (-1, 0, +1)
         #    b) Training and testing the HDC system on "Nbr_of_trials" trials (with different random dataset splits)
         #    c) Returns lambda_1*Acc + lambda_2*Sparsity, Accuracy and Sparsity for each trials
-        local_avg, local_avgre, local_sparse = evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, alpha_sp, n_class, N_train, D_b, lambda_1, lambda_2, B_cnt,D_HDC)
+        local_avg, local_avgre, local_sparse,_ = evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, alpha_sp, n_class, N_train, D_b, lambda_1, lambda_2, B_cnt,D_HDC)
         AccsOrig.append(np.mean(local_avgre))
         SparsitiesOrig.append(np.mean(local_sparse))
 
@@ -211,7 +211,7 @@ for optimalpoint in range(N_tradeof_points):
         
         #Evaluate cost of reflected point x_r
         
-        F_curr, acc_curr, sparse_curr = evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, x_r[2], x_r[3], x_r[0], x_r[1], n_class, N_train, x_r[4], lambda_1, lambda_2, B_cnt, D_HDC)
+        F_curr, acc_curr, sparse_curr,_ = evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, x_r[2], x_r[3], x_r[0], x_r[1], n_class, N_train, x_r[4], lambda_1, lambda_2, B_cnt, D_HDC)
         F_curr, acc_curr, sparse_curr = 1 - np.mean(F_curr), np.mean(acc_curr), np.mean(sparse_curr)
         if F_curr < F_of_x[-2] and  F_of_x[0] <= F_curr:
             F_of_x[-1] = F_curr
@@ -230,7 +230,7 @@ for optimalpoint in range(N_tradeof_points):
                 
                 #Evaluate cost of reflected point x_e
                 
-                F_exp, acc_exp, sparse_exp = evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, x_e[2], x_e[3], x_e[0], x_e[1], n_class, N_train, x_e[4], lambda_1, lambda_2, B_cnt, D_HDC)
+                F_exp, acc_exp, sparse_exp,_ = evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, x_e[2], x_e[3], x_e[0], x_e[1], n_class, N_train, x_e[4], lambda_1, lambda_2, B_cnt, D_HDC)
                 F_exp, acc_exp, sparse_exp = 1 - np.mean(F_exp), np.mean(acc_exp), np.mean(sparse_exp)
                 if F_exp < F_curr:
                     F_of_x[-1] = F_exp
@@ -252,7 +252,7 @@ for optimalpoint in range(N_tradeof_points):
                  
                 #Evaluate cost of contracted point x_c
                 
-                F_c, acc_c, sparse_c = evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, x_c[2], x_c[3], x_c[0], x_c[1], n_class, N_train, x_c[4], lambda_1, lambda_2, B_cnt, D_HDC)
+                F_c, acc_c, sparse_c,_ = evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, x_c[2], x_c[3], x_c[0], x_c[1], n_class, N_train, x_c[4], lambda_1, lambda_2, B_cnt, D_HDC)
                 F_c, acc_c, sparse_c = 1 - np.mean(F_c), np.mean(acc_c), np.mean(sparse_c)
                 if F_c < F_of_x[-1] and F_c < F_curr:
                     F_of_x[-1] = F_c
@@ -263,7 +263,7 @@ for optimalpoint in range(N_tradeof_points):
                     #4) Shrinking
                     for rep in range(1, Simplex.shape[0]):
                         x_rep = Simplex[0,:] + sigma_simp * (Simplex[rep,:] - Simplex[0,:])
-                        F_of_x[rep], Accs[rep], Sparsities[rep] = evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, x_rep[2], x_rep[3], x_rep[0], x_rep[1], n_class, N_train, x_rep[4], lambda_1, lambda_2, B_cnt, D_HDC)
+                        F_of_x[rep], Accs[rep], Sparsities[rep],_ = evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, x_rep[2], x_rep[3], x_rep[0], x_rep[1], n_class, N_train, x_rep[4], lambda_1, lambda_2, B_cnt, D_HDC)
                         F_of_x[rep], Accs[rep], Sparsities[rep] = 1 - np.mean(F_of_x[rep]), np.mean(Accs[rep]), np.mean(Sparsities[rep])
                         Simplex[rep,:] = x_rep
     
